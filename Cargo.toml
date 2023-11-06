@@ -6,6 +6,7 @@ members = [
     "vulkano-shaders",
     "vulkano-util",
     # "vulkano-win",
+    "reflect-push-constants-issue",
 ]
 resolver = "2"
 
