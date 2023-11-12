@@ -120,9 +120,7 @@ fn multiple_entry_points() {
             .values()
             .find(|x| x.name == "main2")
             .unwrap()
-            .push_constant_requirements
-            .unwrap()
-            .size,
-        0
+            .push_constant_requirements,
+        None
     );
 }
