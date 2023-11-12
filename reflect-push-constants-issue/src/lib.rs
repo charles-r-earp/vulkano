@@ -1,7 +1,10 @@
 #[cfg(test)]
 use rspirv::{
     binary::{Assemble, Disassemble},
-    spirv::{AddressingModel, ExecutionModel, FunctionControl, MemoryModel, StorageClass},
+    dr::Operand,
+    spirv::{
+        AddressingModel, Decoration, ExecutionModel, FunctionControl, MemoryModel, StorageClass,
+    },
 };
 #[cfg(test)]
 use std::collections::HashMap;
@@ -17,9 +20,21 @@ fn push_uint_before_struct() {
     let uint = b.type_int(32, 0);
     let ptr_push_uint = b.type_pointer(None, StorageClass::PushConstant, uint);
     let zero = b.constant_u32(uint, 0);
-    let push_struct1 = b.type_struct([uint, uint]);
-    let ptr_push_struct1 = b.type_pointer(None, StorageClass::PushConstant, push_struct1);
-    let var1 = b.variable(ptr_push_struct1, None, StorageClass::PushConstant, None);
+    let push_struct = b.type_struct([uint, uint]);
+    b.member_decorate(
+        push_struct,
+        0,
+        Decoration::Offset,
+        [Operand::LiteralInt32(0)],
+    );
+    b.member_decorate(
+        push_struct,
+        1,
+        Decoration::Offset,
+        [Operand::LiteralInt32(4)],
+    );
+    let ptr_push_struct = b.type_pointer(None, StorageClass::PushConstant, push_struct);
+    let var1 = b.variable(ptr_push_struct, None, StorageClass::PushConstant, None);
     let func1 = b
         .begin_function(
             void,
@@ -52,10 +67,22 @@ fn multiple_entry_points() {
     let voidf = b.type_function(void, vec![void]);
     let uint = b.type_int(32, 0);
     let zero = b.constant_u32(uint, 0);
-    let push_struct1 = b.type_struct([uint, uint]);
-    let ptr_push_struct1 = b.type_pointer(None, StorageClass::PushConstant, push_struct1);
+    let push_struct = b.type_struct([uint, uint]);
+    b.member_decorate(
+        push_struct,
+        0,
+        Decoration::Offset,
+        [Operand::LiteralInt32(0)],
+    );
+    b.member_decorate(
+        push_struct,
+        1,
+        Decoration::Offset,
+        [Operand::LiteralInt32(4)],
+    );
+    let ptr_push_struct = b.type_pointer(None, StorageClass::PushConstant, push_struct);
     let ptr_push_uint = b.type_pointer(None, StorageClass::PushConstant, uint);
-    let var1 = b.variable(ptr_push_struct1, None, StorageClass::PushConstant, None);
+    let var1 = b.variable(ptr_push_struct, None, StorageClass::PushConstant, None);
     let func1 = b
         .begin_function(void, None, FunctionControl::NONE, voidf)
         .unwrap();
@@ -77,5 +104,25 @@ fn multiple_entry_points() {
     let spirv = Spirv::new(&module.assemble()).unwrap();
     dbg!(&spirv);
     let entry_points: HashMap<_, _> = vulkano::shader::reflect::entry_points(&spirv).collect();
-    dbg!(entry_points);
+    dbg!(&entry_points);
+    assert_eq!(
+        entry_points
+            .values()
+            .find(|x| x.name == "main1")
+            .unwrap()
+            .push_constant_requirements
+            .unwrap()
+            .size,
+        8
+    );
+    assert_eq!(
+        entry_points
+            .values()
+            .find(|x| x.name == "main2")
+            .unwrap()
+            .push_constant_requirements
+            .unwrap()
+            .size,
+        0
+    );
 }
