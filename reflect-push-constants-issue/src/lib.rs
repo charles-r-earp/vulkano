@@ -54,7 +54,17 @@ fn push_uint_before_struct() {
     let spirv = Spirv::new(&module.assemble()).unwrap();
     dbg!(&spirv);
     let entry_points: HashMap<_, _> = vulkano::shader::reflect::entry_points(&spirv).collect();
-    dbg!(entry_points);
+    dbg!(&entry_points);
+    assert_eq!(
+        entry_points
+            .values()
+            .find(|x| x.name == "main1")
+            .unwrap()
+            .push_constant_requirements
+            .unwrap()
+            .size,
+        8
+    );
 }
 
 #[test]
